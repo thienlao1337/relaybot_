@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: portfolio-telegram-bot
+    env: docker
+    plan: free
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: RUN_MODE
+        value: webhook
+      - key: WEBHOOK_HOST
+        sync: false   # set this to your Render URL AFTER first deploy, e.g. https://portfolio-telegram-bot.onrender.com
+      - key: DB_PATH
+        value: /app/bot.db
+      - key: ANTHROPIC_API_KEY
+        sync: false   # optional - enables the AI assistant via Claude
+      - key: OPENAI_API_KEY
+        sync: false   # optional - enables the AI assistant via OpenAI (used if ANTHROPIC_API_KEY is not set)
+      - key: STARS_PRICE
+        value: "1"

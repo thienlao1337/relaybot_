@@ -1,0 +1,47 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+
+_raw_admin_id = (os.getenv("ADMIN_ID", "0") or "0").strip()
+try:
+    ADMIN_ID = int(_raw_admin_id)
+except ValueError:
+    print(
+        f"WARNING: ADMIN_ID={_raw_admin_id!r} is not a number (it should be your numeric "
+        "Telegram user id from @userinfobot, not a link or username) - /broadcast disabled."
+    )
+    ADMIN_ID = 0
+
+RUN_MODE = os.getenv("RUN_MODE", "polling")  # "polling" (local/demo) or "webhook" (Render)
+
+# --- webhook-mode only settings ---
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "")  # e.g. https://your-app.onrender.com
+WEBHOOK_PATH = "/webhook/" + BOT_TOKEN[-12:] if BOT_TOKEN else "/webhook"
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else ""
+PORT = int(os.getenv("PORT", "8080"))
+
+DB_PATH = os.getenv("DB_PATH", "bot.db")
+
+# --- Mini App (Telegram WebApp) ---
+WEBAPP_PATH = "/app"
+WEBAPP_URL = f"{WEBHOOK_HOST}{WEBAPP_PATH}" if WEBHOOK_HOST else ""
+
+# --- AI assistant (optional - feature disables itself if no key is set) ---
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+AI_ENABLED = bool(ANTHROPIC_API_KEY or OPENAI_API_KEY)
+AI_COOLDOWN_SECONDS = int(os.getenv("AI_COOLDOWN_SECONDS", "20"))
+
+# --- Payments (Telegram Stars - no external provider needed) ---
+# Stars payments use currency "XTR" and an empty provider_token by design.
+STARS_PRICE = int(os.getenv("STARS_PRICE", "1"))  # amount in Telegram Stars
+
+if not BOT_TOKEN:
+    raise RuntimeError(
+        "BOT_TOKEN is not set. Get one from @BotFather in Telegram and put it in your .env file."
+    )
