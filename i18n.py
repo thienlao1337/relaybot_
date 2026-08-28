@@ -121,9 +121,9 @@ TEXT = {
     },
     "ai_thinking": {"ua": "Думаю…", "en": "Thinking…", "ru": "Думаю…"},
     "ai_disabled": {
-        "ua": "AI-помічник вимкнено: не задано ANTHROPIC_API_KEY або OPENAI_API_KEY у налаштуваннях.",
-        "en": "AI assistant is disabled: no ANTHROPIC_API_KEY or OPENAI_API_KEY is configured.",
-        "ru": "AI-помощник выключен: не задан ANTHROPIC_API_KEY или OPENAI_API_KEY в настройках.",
+        "ua": "AI-помічник вимкнено: не задано GEMINI_API_KEY, ANTHROPIC_API_KEY або OPENAI_API_KEY у налаштуваннях (GEMINI_API_KEY — безкоштовний варіант).",
+        "en": "AI assistant is disabled: no GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY is configured (GEMINI_API_KEY is the free option).",
+        "ru": "AI-помощник выключен: не задан GEMINI_API_KEY, ANTHROPIC_API_KEY или OPENAI_API_KEY в настройках (GEMINI_API_KEY — бесплатный вариант).",
     },
     "ai_cooldown": {
         "ua": "Занадто часто — спробуйте ще раз через {seconds} с.",

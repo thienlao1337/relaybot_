@@ -14,9 +14,11 @@ services:
         sync: false   # set this to your Render URL AFTER first deploy, e.g. https://portfolio-telegram-bot.onrender.com
       - key: DB_PATH
         value: /app/bot.db
+      - key: GEMINI_API_KEY
+        sync: false   # optional - enables the AI assistant via Gemini (has a free tier, checked first)
       - key: ANTHROPIC_API_KEY
-        sync: false   # optional - enables the AI assistant via Claude
+        sync: false   # optional - enables the AI assistant via Claude (used if GEMINI_API_KEY is not set)
       - key: OPENAI_API_KEY
-        sync: false   # optional - enables the AI assistant via OpenAI (used if ANTHROPIC_API_KEY is not set)
+        sync: false   # optional - enables the AI assistant via OpenAI (used if neither of the above is set)
       - key: STARS_PRICE
         value: "1"

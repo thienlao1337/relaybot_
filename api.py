@@ -3,13 +3,20 @@ Every request must carry a valid Telegram WebApp initData string, checked
 against the bot token per security.validate_init_data.
 """
 
+import asyncio
 import json
+import logging
 
+import aiohttp
 from aiohttp import web
 
 import db
 from security import validate_init_data
 from webapp_page import get_webapp_html
+from handlers import _geocode_city, _fetch_weather, _uah_rate, LANG_TO_GEOCODE
+from i18n import weather_desc
+
+log = logging.getLogger("bot.api")
 
 
 def _auth(request: web.Request):
@@ -69,9 +76,57 @@ async def delete_task(request: web.Request):
     return web.json_response({"ok": True})
 
 
+async def get_weather(request: web.Request):
+    user_id = _auth(request)
+    if user_id is None:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    city = (request.query.get("city") or "").strip()
+    if not city:
+        return web.json_response({"error": "city required"}, status=400)
+    lang = await db.get_lang(user_id)
+    try:
+        async with aiohttp.ClientSession() as session:
+            place = await _geocode_city(session, city, preferred=LANG_TO_GEOCODE.get(lang, "en"))
+            if not place:
+                return web.json_response({"error": "not_found"}, status=404)
+            current = await _fetch_weather(session, place["latitude"], place["longitude"])
+        if not current:
+            return web.json_response({"error": "not_found"}, status=404)
+        country = place.get("country_code", "")
+        label = f"{place.get('name', city)}, {country}" if country else place.get("name", city)
+        return web.json_response(
+            {
+                "city": label,
+                "temp": current.get("temperature"),
+                "wind": current.get("windspeed"),
+                "desc": weather_desc(current.get("weathercode", -1), lang),
+            }
+        )
+    except Exception:
+        log.exception("weather API call failed")
+        return web.json_response({"error": "upstream_failed"}, status=502)
+
+
+async def get_currency(request: web.Request):
+    user_id = _auth(request)
+    if user_id is None:
+        return web.json_response({"error": "unauthorized"}, status=401)
+    try:
+        async with aiohttp.ClientSession() as session:
+            usd, eur = await asyncio.gather(_uah_rate(session, "USD"), _uah_rate(session, "EUR"))
+        if usd is None or eur is None:
+            raise ValueError("missing rate")
+        return web.json_response({"usd": usd, "eur": eur})
+    except Exception:
+        log.exception("currency API call failed")
+        return web.json_response({"error": "upstream_failed"}, status=502)
+
+
 def register(app: web.Application, webapp_path: str):
     app.router.add_get(webapp_path, webapp_page)
     app.router.add_get("/api/tasks", list_tasks)
     app.router.add_post("/api/tasks", add_task)
     app.router.add_post("/api/tasks/{task_id}/toggle", toggle_task)
     app.router.add_delete("/api/tasks/{task_id}", delete_task)
+    app.router.add_get("/api/weather", get_weather)
+    app.router.add_get("/api/currency", get_currency)

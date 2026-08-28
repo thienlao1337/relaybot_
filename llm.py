@@ -5,6 +5,8 @@
 import aiohttp
 
 from config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
     ANTHROPIC_API_KEY,
     ANTHROPIC_MODEL,
     OPENAI_API_KEY,
@@ -20,6 +22,28 @@ SYSTEM_PROMPT = (
 
 class LLMError(Exception):
     pass
+
+
+async def _ask_gemini(question: str) -> str:
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    )
+    payload = {
+        "contents": [{"parts": [{"text": question}]}],
+        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, timeout=30) as resp:
+            data = await resp.json()
+            if resp.status != 200:
+                raise LLMError(data.get("error", {}).get("message", f"HTTP {resp.status}"))
+            candidates = data.get("candidates") or []
+            if not candidates:
+                raise LLMError("empty response")
+            parts = candidates[0].get("content", {}).get("parts", [])
+            text = "".join(p.get("text", "") for p in parts)
+            return text.strip() or "…"
 
 
 async def _ask_anthropic(question: str) -> str:
@@ -71,6 +95,8 @@ async def _ask_openai(question: str) -> str:
 
 
 async def ask(question: str) -> str:
+    if GEMINI_API_KEY:
+        return await _ask_gemini(question)
     if ANTHROPIC_API_KEY:
         return await _ask_anthropic(question)
     if OPENAI_API_KEY:

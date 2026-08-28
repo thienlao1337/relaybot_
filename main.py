@@ -45,8 +45,9 @@ def run_webhook():
     async def on_startup(app: web.Application):
         await db.init_db()
         if WEBHOOK_URL:
+            log.info("Webhook mode: attempting to set webhook to %s", WEBHOOK_URL)
             await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
-            log.info("Webhook mode: set webhook to %s", WEBHOOK_URL)
+            log.info("Webhook mode: webhook set successfully.")
         else:
             log.warning(
                 "WEBHOOK_HOST is not set yet - webhook was NOT registered with Telegram. "

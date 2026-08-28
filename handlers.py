@@ -196,12 +196,23 @@ async def cmd_tasks(message: Message):
 
 
 # ---------- weather (open-meteo, no API key required) ----------
-async def _geocode_city(session: aiohttp.ClientSession, city: str):
+# Open-Meteo's geocoder only matches a name against its index for the *given*
+# language - a Cyrillic query like "Київ" returns nothing under language=en, but
+# matches fine under language=uk. So we try a short chain of languages, starting
+# with whichever matches the user's bot language, and stop at the first hit.
+LANG_TO_GEOCODE = {"ua": "uk", "en": "en", "ru": "ru"}
+
+
+async def _geocode_city(session: aiohttp.ClientSession, city: str, preferred: str = "en"):
     url = "https://geocoding-api.open-meteo.com/v1/search"
-    async with session.get(url, params={"name": city, "count": 1, "language": "en"}) as resp:
-        data = await resp.json()
-        results = data.get("results") or []
-        return results[0] if results else None
+    order = [preferred] + [code for code in ("en", "uk", "ru") if code != preferred]
+    for code in order:
+        async with session.get(url, params={"name": city, "count": 1, "language": code}) as resp:
+            data = await resp.json()
+            results = data.get("results") or []
+            if results:
+                return results[0]
+    return None
 
 
 async def _fetch_weather(session: aiohttp.ClientSession, lat: float, lon: float):
@@ -232,7 +243,7 @@ async def weather_city_received(message: Message, state: FSMContext):
     lang = await db.get_lang(message.from_user.id)
     city = message.text.strip()
     async with aiohttp.ClientSession() as session:
-        place = await _geocode_city(session, city)
+        place = await _geocode_city(session, city, preferred=LANG_TO_GEOCODE.get(lang, "en"))
         if not place:
             await message.answer(t("weather_not_found", lang))
             return

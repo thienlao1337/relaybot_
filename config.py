@@ -18,7 +18,13 @@ except ValueError:
 RUN_MODE = os.getenv("RUN_MODE", "polling")  # "polling" (local/demo) or "webhook" (Render)
 
 # --- webhook-mode only settings ---
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "")  # e.g. https://your-app.onrender.com
+# Cleaned up defensively: strips whitespace/accidental quotes, adds "https://" if the
+# scheme was left off, and drops a trailing slash - these are the most common ways
+# people mistype this value when pasting it from the Render dashboard.
+_raw_webhook_host = os.getenv("WEBHOOK_HOST", "").strip().strip('"').strip("'").rstrip("/")
+if _raw_webhook_host and not _raw_webhook_host.startswith(("http://", "https://")):
+    _raw_webhook_host = "https://" + _raw_webhook_host
+WEBHOOK_HOST = _raw_webhook_host  # e.g. https://your-app.onrender.com
 WEBHOOK_PATH = "/webhook/" + BOT_TOKEN[-12:] if BOT_TOKEN else "/webhook"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else ""
 PORT = int(os.getenv("PORT", "8080"))
@@ -30,11 +36,14 @@ WEBAPP_PATH = "/app"
 WEBAPP_URL = f"{WEBHOOK_HOST}{WEBAPP_PATH}" if WEBHOOK_HOST else ""
 
 # --- AI assistant (optional - feature disables itself if no key is set) ---
+# Checked in this order: Gemini (has a genuinely free tier) -> Anthropic -> OpenAI.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-AI_ENABLED = bool(ANTHROPIC_API_KEY or OPENAI_API_KEY)
+AI_ENABLED = bool(GEMINI_API_KEY or ANTHROPIC_API_KEY or OPENAI_API_KEY)
 AI_COOLDOWN_SECONDS = int(os.getenv("AI_COOLDOWN_SECONDS", "20"))
 
 # --- Payments (Telegram Stars - no external provider needed) ---
