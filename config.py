@@ -38,11 +38,11 @@ WEBAPP_URL = f"{WEBHOOK_HOST}{WEBAPP_PATH}" if WEBHOOK_HOST else ""
 # --- AI assistant (optional - feature disables itself if no key is set) ---
 # Checked in this order: Gemini (has a genuinely free tier) -> Anthropic -> OpenAI.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
 AI_ENABLED = bool(GEMINI_API_KEY or ANTHROPIC_API_KEY or OPENAI_API_KEY)
 AI_COOLDOWN_SECONDS = int(os.getenv("AI_COOLDOWN_SECONDS", "20"))
 
