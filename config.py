@@ -31,6 +31,23 @@ PORT = int(os.getenv("PORT", "8080"))
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
 
+# --- database (SQLite by default, PostgreSQL in production) ---
+# DATABASE_URL is optional. Unset -> SQLite file at DB_PATH (zero setup, fine for
+# local dev and small demos). Set it to a Postgres connection string to switch -
+# db.py's SQLAlchemy models and queries work unchanged either way. Render's own
+# Postgres add-on hands out a "postgres://..." or "postgresql://..." URL; both
+# are rewritten below to the "postgresql+asyncpg://..." form SQLAlchemy's async
+# engine requires, so you can paste it in as-is.
+_raw_database_url = os.getenv("DATABASE_URL", "").strip()
+if _raw_database_url:
+    if _raw_database_url.startswith("postgres://"):
+        _raw_database_url = "postgresql+asyncpg://" + _raw_database_url[len("postgres://") :]
+    elif _raw_database_url.startswith("postgresql://") and "+asyncpg" not in _raw_database_url:
+        _raw_database_url = _raw_database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    DATABASE_URL = _raw_database_url
+else:
+    DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+
 # --- Mini App (Telegram WebApp) ---
 WEBAPP_PATH = "/app"
 WEBAPP_URL = f"{WEBHOOK_HOST}{WEBAPP_PATH}" if WEBHOOK_HOST else ""
@@ -49,6 +66,16 @@ AI_COOLDOWN_SECONDS = int(os.getenv("AI_COOLDOWN_SECONDS", "20"))
 # --- Payments (Telegram Stars - no external provider needed) ---
 # Stars payments use currency "XTR" and an empty provider_token by design.
 STARS_PRICE = int(os.getenv("STARS_PRICE", "1"))  # amount in Telegram Stars
+
+# --- price watcher (background job demo) ---
+# Polls open.er-api.com every few minutes to fire user-set currency alerts.
+# On Render's free tier a background loop keeps the service from ever sleeping
+# (see README) - set this to "false" to disable it if that's not what you want.
+PRICE_WATCH_ENABLED = os.getenv("PRICE_WATCH_ENABLED", "true").strip().lower() not in (
+    "false",
+    "0",
+    "no",
+)
 
 if not BOT_TOKEN:
     raise RuntimeError(

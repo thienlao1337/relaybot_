@@ -12,6 +12,7 @@ TEXT = {
     "menu_ai": {"ua": "🤖 AI-помічник", "en": "🤖 AI assistant", "ru": "🤖 AI-помощник"},
     "menu_webapp": {"ua": "🖥 Відкрити застосунок", "en": "🖥 Open mini app", "ru": "🖥 Открыть приложение"},
     "menu_stars": {"ua": "⭐ Підтримати проєкт", "en": "⭐ Support this project", "ru": "⭐ Поддержать проект"},
+    "menu_watch": {"ua": "🔔 Курс-алерт", "en": "🔔 Rate alert", "ru": "🔔 Курс-алерт"},
     "back": {"ua": "◀️ Назад", "en": "◀️ Back", "ru": "◀️ Назад"},
     "help": {
         "ua": (
@@ -155,6 +156,52 @@ TEXT = {
         "ua": "Дякую за підтримку! 🎉 Оплата пройшла успішно.",
         "en": "Thanks for the support! 🎉 Payment succeeded.",
         "ru": "Спасибо за поддержку! 🎉 Оплата прошла успешно.",
+    },
+    "watch_list_title": {
+        "ua": "🔔 Ваші алерти по курсу:",
+        "en": "🔔 Your rate alerts:",
+        "ru": "🔔 Ваши алерты по курсу:",
+    },
+    "watch_list_empty": {
+        "ua": "Алертів поки немає. Бот повідомить вас, щойно обраний курс перетне поріг.",
+        "en": "No alerts yet. The bot will message you the moment a rate crosses your threshold.",
+        "ru": "Алертов пока нет. Бот сообщит вам, как только выбранный курс пересечёт порог.",
+    },
+    "watch_add_btn": {"ua": "➕ Новий алерт", "en": "➕ New alert", "ru": "➕ Новый алерт"},
+    "watch_pick_currency": {
+        "ua": "За якою валютою стежити?",
+        "en": "Which currency should I watch?",
+        "ru": "За какой валютой следить?",
+    },
+    "watch_pick_direction": {
+        "ua": "Повідомити, коли курс {currency}/UAH:",
+        "en": "Notify me when the {currency}/UAH rate is:",
+        "ru": "Сообщить, когда курс {currency}/UAH:",
+    },
+    "watch_dir_above": {"ua": "⬆️ Вище за...", "en": "⬆️ Above...", "ru": "⬆️ Выше чем..."},
+    "watch_dir_below": {"ua": "⬇️ Нижче за...", "en": "⬇️ Below...", "ru": "⬇️ Ниже чем..."},
+    "watch_ask_threshold": {
+        "ua": "Напишіть число-поріг (наприклад 42.5):",
+        "en": "Send the threshold number (e.g. 42.5):",
+        "ru": "Напишите число-порог (например 42.5):",
+    },
+    "watch_invalid_number": {
+        "ua": "Це не схоже на число. Спробуйте ще раз, наприклад 42.5:",
+        "en": "That doesn't look like a number. Try again, e.g. 42.5:",
+        "ru": "Это не похоже на число. Попробуйте ещё раз, например 42.5:",
+    },
+    "watch_created": {
+        "ua": "Готово ✅ Повідомлю, коли {currency}/UAH буде {direction} {threshold}.",
+        "en": "Done ✅ I'll notify you when {currency}/UAH is {direction} {threshold}.",
+        "ru": "Готово ✅ Сообщу, когда {currency}/UAH будет {direction} {threshold}.",
+    },
+    "watch_direction_word_above": {"ua": "вище за", "en": "above", "ru": "выше"},
+    "watch_direction_word_below": {"ua": "нижче за", "en": "below", "ru": "ниже"},
+    "watch_deleted": {"ua": "Видалено 🗑", "en": "Deleted 🗑", "ru": "Удалено 🗑"},
+    "watch_triggered": {
+        "ua": "🔔 Курс {currency}/UAH зараз {rate} — це перетнуло ваш поріг {threshold}.",
+        "en": "🔔 {currency}/UAH is now {rate} — that crossed your threshold of {threshold}.",
+        "ru": "🔔 Курс {currency}/UAH сейчас {rate} — это пересекло ваш порог {threshold}.",
     },
 }
 

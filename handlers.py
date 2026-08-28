@@ -18,6 +18,7 @@ from aiogram.types import (
 )
 
 import db
+import knowledge_base
 import llm
 from i18n import t, weather_desc
 from config import ADMIN_ID, AI_ENABLED, AI_COOLDOWN_SECONDS, WEBAPP_URL, STARS_PRICE
@@ -41,12 +42,17 @@ class AIForm(StatesGroup):
     waiting_question = State()
 
 
+class WatchForm(StatesGroup):
+    waiting_threshold = State()
+
+
 # ---------- keyboards ----------
 def main_menu_kb(lang: str) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(text=t("menu_tasks", lang), callback_data="menu:tasks")],
         [InlineKeyboardButton(text=t("menu_weather", lang), callback_data="menu:weather")],
         [InlineKeyboardButton(text=t("menu_currency", lang), callback_data="menu:currency")],
+        [InlineKeyboardButton(text=t("menu_watch", lang), callback_data="menu:watch")],
         [InlineKeyboardButton(text=t("menu_ai", lang), callback_data="menu:ai")],
     ]
     if WEBAPP_URL:
@@ -85,6 +91,42 @@ def tasks_kb(lang: str, tasks) -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton(text=t("tasks_add_btn", lang), callback_data="task:add")])
     rows.append([InlineKeyboardButton(text=t("back", lang), callback_data="menu:back")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def watch_list_kb(lang: str, watchers) -> InlineKeyboardMarkup:
+    rows = []
+    for watcher_id, currency, direction, threshold in watchers:
+        dir_word = t(f"watch_direction_word_{direction}", lang)
+        label = f"{currency} {dir_word} {threshold}"
+        rows.append(
+            [
+                InlineKeyboardButton(text=label[:40], callback_data="noop"),
+                InlineKeyboardButton(text="🗑", callback_data=f"watch:del:{watcher_id}"),
+            ]
+        )
+    rows.append([InlineKeyboardButton(text=t("watch_add_btn", lang), callback_data="watch:add")])
+    rows.append([InlineKeyboardButton(text=t("back", lang), callback_data="menu:back")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def watch_currency_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="USD", callback_data="watch:cur:USD"),
+                InlineKeyboardButton(text="EUR", callback_data="watch:cur:EUR"),
+            ]
+        ]
+    )
+
+
+def watch_direction_kb(lang: str, currency: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=t("watch_dir_above", lang), callback_data=f"watch:dir:{currency}:above")],
+            [InlineKeyboardButton(text=t("watch_dir_below", lang), callback_data=f"watch:dir:{currency}:below")],
+        ]
+    )
 
 
 def lang_kb() -> InlineKeyboardMarkup:
@@ -314,6 +356,82 @@ async def cmd_currency(message: Message):
         await msg.edit_text(t("currency_error", lang))
 
 
+# ---------- currency rate alerts (background watcher demo) ----------
+@router.callback_query(F.data == "menu:watch")
+async def cb_watch(call: CallbackQuery):
+    lang = await db.get_lang(call.from_user.id)
+    watchers = await db.list_user_watchers(call.from_user.id)
+    text = t("watch_list_empty", lang) if not watchers else t("watch_list_title", lang)
+    await call.message.edit_text(text, reply_markup=watch_list_kb(lang, watchers))
+    await call.answer()
+
+
+@router.message(Command("watch"))
+async def cmd_watch(message: Message):
+    lang = await db.get_lang(message.from_user.id)
+    watchers = await db.list_user_watchers(message.from_user.id)
+    text = t("watch_list_empty", lang) if not watchers else t("watch_list_title", lang)
+    await message.answer(text, reply_markup=watch_list_kb(lang, watchers))
+
+
+@router.callback_query(F.data == "watch:add")
+async def cb_watch_add(call: CallbackQuery):
+    lang = await db.get_lang(call.from_user.id)
+    await call.message.edit_text(t("watch_pick_currency", lang), reply_markup=watch_currency_kb())
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("watch:cur:"))
+async def cb_watch_currency(call: CallbackQuery):
+    lang = await db.get_lang(call.from_user.id)
+    currency = call.data.split(":")[2]
+    await call.message.edit_text(
+        t("watch_pick_direction", lang, currency=currency), reply_markup=watch_direction_kb(lang, currency)
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("watch:dir:"))
+async def cb_watch_direction(call: CallbackQuery, state: FSMContext):
+    lang = await db.get_lang(call.from_user.id)
+    _, _, currency, direction = call.data.split(":")
+    await state.update_data(currency=currency, direction=direction)
+    await state.set_state(WatchForm.waiting_threshold)
+    await call.message.edit_text(t("watch_ask_threshold", lang), reply_markup=back_kb(lang))
+    await call.answer()
+
+
+@router.message(WatchForm.waiting_threshold, F.text & ~F.text.startswith("/"))
+async def watch_threshold_received(message: Message, state: FSMContext):
+    lang = await db.get_lang(message.from_user.id)
+    raw = message.text.strip().replace(",", ".")
+    try:
+        threshold = float(raw)
+    except ValueError:
+        await message.answer(t("watch_invalid_number", lang))
+        return
+    data = await state.get_data()
+    currency = data.get("currency", "USD")
+    direction = data.get("direction", "above")
+    await db.add_watcher(message.from_user.id, currency, direction, threshold)
+    await state.clear()
+    dir_word = t(f"watch_direction_word_{direction}", lang)
+    await message.answer(t("watch_created", lang, currency=currency, direction=dir_word, threshold=threshold))
+    watchers = await db.list_user_watchers(message.from_user.id)
+    await message.answer(t("watch_list_title", lang), reply_markup=watch_list_kb(lang, watchers))
+
+
+@router.callback_query(F.data.startswith("watch:del:"))
+async def cb_watch_delete(call: CallbackQuery):
+    lang = await db.get_lang(call.from_user.id)
+    watcher_id = int(call.data.split(":")[2])
+    await db.delete_watcher(call.from_user.id, watcher_id)
+    watchers = await db.list_user_watchers(call.from_user.id)
+    text = t("watch_list_empty", lang) if not watchers else t("watch_list_title", lang)
+    await call.message.edit_text(text, reply_markup=watch_list_kb(lang, watchers))
+    await call.answer(t("watch_deleted", lang))
+
+
 # ---------- language ----------
 @router.callback_query(F.data == "menu:lang")
 async def cb_lang(call: CallbackQuery):
@@ -392,8 +510,13 @@ async def ai_question_received(message: Message, state: FSMContext):
     _ai_last_call[message.from_user.id] = now
 
     thinking = await message.answer(t("ai_thinking", lang))
+    question = message.text.strip()[:2000]
     try:
-        answer = await llm.ask(message.text.strip()[:2000])
+        # Ground the answer in the bot's own FAQ when the question looks
+        # related to it; llm.ask() falls back to an open-ended answer when
+        # knowledge_base.search() finds nothing relevant.
+        context_docs = knowledge_base.search(question)
+        answer = await llm.ask(question, context=context_docs)
         await thinking.edit_text(answer)
     except llm.LLMError as e:
         log.warning("LLM call failed: %s", e)

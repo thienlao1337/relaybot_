@@ -2,3 +2,8 @@ aiogram==3.13.1
 aiohttp==3.10.10
 aiosqlite==0.20.0
 python-dotenv==1.0.1
+# Range-pinned (not exact) since both are stable 2.x/0.x APIs with frequent
+# patch releases - exact-pinning here just goes stale, as happened with the
+# AI provider model names below (see README's troubleshooting section).
+SQLAlchemy[asyncio]>=2.0,<2.1
+asyncpg>=0.29,<1.0

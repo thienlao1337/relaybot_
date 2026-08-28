@@ -111,6 +111,25 @@ def get_webapp_html() -> str:
   .card .sub { color: var(--tg-theme-hint-color, #888888); font-size: 0.85rem; margin-top: 4px; }
   .rate-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.98rem; }
   .rate-row + .rate-row { border-top: 1px solid var(--tg-theme-bg-color, #ffffff); }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: var(--tg-theme-secondary-bg-color, #f4f4f5); border-radius: 12px; padding: 12px 14px; }
+  .stat-card .num { font-size: 1.5rem; font-weight: 600; }
+  .stat-card .label { color: var(--tg-theme-hint-color, #888888); font-size: 0.78rem; margin-top: 2px; }
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--tg-theme-hint-color, #cccccc);
+    background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+    color: var(--tg-theme-text-color, #111111);
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 10px;
+  }
+  .msg { font-size: 0.85rem; margin-top: 8px; color: var(--tg-theme-hint-color, #888888); }
 </style>
 </head>
 <body>
@@ -120,6 +139,7 @@ def get_webapp_html() -> str:
     <div class="tab active" data-tab="tasks">📝 Задачі</div>
     <div class="tab" data-tab="weather">🌦 Погода</div>
     <div class="tab" data-tab="currency">💱 Курси</div>
+    <div class="tab" data-tab="admin" id="adminTab" style="display:none;">🛠 Admin</div>
   </div>
 
   <!-- Tasks -->
@@ -156,6 +176,19 @@ def get_webapp_html() -> str:
     </div>
   </div>
 
+  <!-- Admin (hidden unless /api/me says is_admin) -->
+  <div class="view" id="view-admin">
+    <div class="stat-grid" id="statGrid">
+      <div class="stat-card"><div class="num">—</div><div class="label">users</div></div>
+      <div class="stat-card"><div class="num">—</div><div class="label">tasks (active/done)</div></div>
+      <div class="stat-card"><div class="num">—</div><div class="label">active alerts</div></div>
+      <div class="stat-card"><div class="num">—</div><div class="label">by language</div></div>
+    </div>
+    <textarea id="broadcastText" placeholder="Broadcast message to all users..."></textarea>
+    <button id="broadcastBtn">Send broadcast</button>
+    <p class="msg" id="broadcastMsg"></p>
+  </div>
+
 <script>
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
@@ -181,6 +214,7 @@ def get_webapp_html() -> str:
       document.getElementById("view-" + tabEl.dataset.tab).classList.add("active");
       if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
       if (tabEl.dataset.tab === "currency") loadCurrency();
+      if (tabEl.dataset.tab === "admin") loadAdminStats();
     });
   });
 
@@ -305,6 +339,52 @@ def get_webapp_html() -> str:
     }
   }
 
+  // ---------- admin ----------
+  async function checkAdmin() {
+    try {
+      const data = await api("/api/me");
+      if (data.is_admin) document.getElementById("adminTab").style.display = "";
+    } catch (e) { /* not authenticated or not admin - tab stays hidden */ }
+  }
+
+  let adminStatsLoaded = false;
+  async function loadAdminStats() {
+    if (adminStatsLoaded) return;
+    try {
+      const s = await api("/api/admin/stats");
+      const cards = document.querySelectorAll("#statGrid .stat-card .num");
+      const byLang = Object.entries(s.by_lang || {}).map(function (e) { return e[0] + ":" + e[1]; }).join(" ") || "—";
+      cards[0].textContent = s.total_users;
+      cards[1].textContent = s.active_tasks + "/" + s.done_tasks;
+      cards[2].textContent = s.active_watchers;
+      cards[3].textContent = byLang;
+      adminStatsLoaded = true;
+    } catch (e) {
+      document.getElementById("broadcastMsg").textContent = "Failed to load stats.";
+    }
+  }
+
+  document.getElementById("broadcastBtn").addEventListener("click", async function () {
+    const textEl = document.getElementById("broadcastText");
+    const msgEl = document.getElementById("broadcastMsg");
+    const text = textEl.value.trim();
+    if (!text) return;
+    const btn = document.getElementById("broadcastBtn");
+    btn.disabled = true;
+    msgEl.textContent = "Sending…";
+    try {
+      const res = await api("/api/admin/broadcast", { method: "POST", body: JSON.stringify({ text: text }) });
+      msgEl.textContent = "Sent to " + res.sent + " / " + res.total + " users.";
+      textEl.value = "";
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    } catch (e) {
+      msgEl.textContent = "Failed to send broadcast.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  checkAdmin();
   loadTasks();
 </script>
 </body>

@@ -22,3 +22,7 @@ services:
         sync: false   # optional - enables the AI assistant via OpenAI (used if neither of the above is set)
       - key: STARS_PRICE
         value: "1"
+      - key: DATABASE_URL
+        sync: false   # optional - point this at a managed Postgres to move off SQLite, see README
+      - key: PRICE_WATCH_ENABLED
+        value: "true"  # background currency-alert polling; keeps the free-tier instance from sleeping
