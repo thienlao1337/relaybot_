@@ -20,7 +20,7 @@ from aiogram.types import (
 import db
 import knowledge_base
 import llm
-from i18n import t, weather_desc
+from i18n import t, weather_desc, lang_from_telegram
 from config import ADMIN_ID, AI_ENABLED, AI_COOLDOWN_SECONDS, WEBAPP_URL, STARS_PRICE
 
 router = Router()
@@ -144,7 +144,9 @@ def lang_kb() -> InlineKeyboardMarkup:
 # ---------- /start ----------
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    lang = await db.ensure_user(message.from_user.id)
+    lang = await db.ensure_user(
+        message.from_user.id, default_lang=lang_from_telegram(message.from_user.language_code)
+    )
     await message.answer(
         t("welcome", lang, name=message.from_user.first_name or "there"),
         reply_markup=main_menu_kb(lang),

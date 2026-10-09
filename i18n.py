@@ -224,6 +224,16 @@ WEATHER_CODES = {
 }
 
 
+def lang_from_telegram(language_code: str | None) -> str:
+    """Pick the bot language for a new user from their Telegram client language."""
+    code = (language_code or "").lower()
+    if code.startswith("uk"):
+        return "ua"
+    if code.startswith("ru"):
+        return "ru"
+    return "en"
+
+
 def t(key: str, lang: str, **kwargs) -> str:
     lang = lang if lang in ("ua", "en", "ru") else "ua"
     template = TEXT[key][lang]

@@ -136,34 +136,34 @@ def get_webapp_html() -> str:
   <h1>Relay</h1>
 
   <div class="tabs">
-    <div class="tab active" data-tab="tasks">📝 Задачі</div>
-    <div class="tab" data-tab="weather">🌦 Погода</div>
-    <div class="tab" data-tab="currency">💱 Курси</div>
+    <div class="tab active" data-tab="tasks" data-i18n="tab_tasks">📝 Tasks</div>
+    <div class="tab" data-tab="weather" data-i18n="tab_weather">🌦 Weather</div>
+    <div class="tab" data-tab="currency" data-i18n="tab_currency">💱 Rates</div>
     <div class="tab" data-tab="admin" id="adminTab" style="display:none;">🛠 Admin</div>
   </div>
 
   <!-- Tasks -->
   <div class="view active" id="view-tasks">
     <div class="row">
-      <input type="text" id="taskInput" placeholder="Нова задача..." />
-      <button id="addBtn">Додати</button>
+      <input type="text" id="taskInput" data-i18n-placeholder="task_placeholder" placeholder="New task..." />
+      <button id="addBtn" data-i18n="add">Add</button>
     </div>
     <div class="stats">
-      <span id="statsLine">0 з 0 виконано</span>
+      <span id="statsLine">0 of 0 done</span>
       <div class="filters">
-        <div class="filter active" data-filter="all">Усі</div>
-        <div class="filter" data-filter="active">Активні</div>
-        <div class="filter" data-filter="done">Виконані</div>
+        <div class="filter active" data-filter="all" data-i18n="filter_all">All</div>
+        <div class="filter" data-filter="active" data-i18n="filter_active">Active</div>
+        <div class="filter" data-filter="done" data-i18n="filter_done">Done</div>
       </div>
     </div>
     <ul id="list"></ul>
-    <p id="empty" class="empty" style="display:none;">Задач поки немає.</p>
+    <p id="empty" class="empty" style="display:none;" data-i18n="no_tasks">No tasks yet.</p>
   </div>
 
   <!-- Weather -->
   <div class="view" id="view-weather">
     <div class="row">
-      <input type="text" id="cityInput" placeholder="Назва міста..." />
+      <input type="text" id="cityInput" data-i18n-placeholder="city_placeholder" placeholder="City name..." />
       <button id="weatherBtn">OK</button>
     </div>
     <div id="weatherResult"></div>
@@ -172,7 +172,7 @@ def get_webapp_html() -> str:
   <!-- Currency -->
   <div class="view" id="view-currency">
     <div class="card" id="currencyResult">
-      <p class="empty">Завантаження…</p>
+      <p class="empty" data-i18n="loading">Loading…</p>
     </div>
   </div>
 
@@ -202,6 +202,62 @@ def get_webapp_html() -> str:
     const data = await res.json().catch(function () { return {}; });
     if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
     return data;
+  }
+
+  // ---------- i18n (follows the language chosen in the bot) ----------
+  const I18N = {
+    en: {
+      tab_tasks: "📝 Tasks", tab_weather: "🌦 Weather", tab_currency: "💱 Rates",
+      task_placeholder: "New task...", add: "Add",
+      filter_all: "All", filter_active: "Active", filter_done: "Done",
+      no_tasks: "No tasks yet.", tasks_failed: "Couldn't load tasks.",
+      stats: "{done} of {total} done",
+      city_placeholder: "City name...", searching: "Searching…",
+      wind: "wind {wind} km/h", city_not_found: "City not found.",
+      loading: "Loading…", rates_failed: "Couldn't load exchange rates."
+    },
+    ua: {
+      tab_tasks: "📝 Задачі", tab_weather: "🌦 Погода", tab_currency: "💱 Курси",
+      task_placeholder: "Нова задача...", add: "Додати",
+      filter_all: "Усі", filter_active: "Активні", filter_done: "Виконані",
+      no_tasks: "Задач поки немає.", tasks_failed: "Не вдалося завантажити задачі.",
+      stats: "{done} з {total} виконано",
+      city_placeholder: "Назва міста...", searching: "Шукаю…",
+      wind: "вітер {wind} км/год", city_not_found: "Не знайшов таке місто.",
+      loading: "Завантаження…", rates_failed: "Не вдалося завантажити курси."
+    },
+    ru: {
+      tab_tasks: "📝 Задачи", tab_weather: "🌦 Погода", tab_currency: "💱 Курсы",
+      task_placeholder: "Новая задача...", add: "Добавить",
+      filter_all: "Все", filter_active: "Активные", filter_done: "Выполненные",
+      no_tasks: "Задач пока нет.", tasks_failed: "Не удалось загрузить задачи.",
+      stats: "{done} из {total} выполнено",
+      city_placeholder: "Название города...", searching: "Ищу…",
+      wind: "ветер {wind} км/ч", city_not_found: "Не нашёл такой город.",
+      loading: "Загрузка…", rates_failed: "Не удалось загрузить курсы."
+    }
+  };
+  let lang = "en";
+
+  function tr(key, vars) {
+    let s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+    Object.keys(vars || {}).forEach(function (k) { s = s.replace("{" + k + "}", vars[k]); });
+    return s;
+  }
+
+  function applyLang(newLang) {
+    if (!I18N[newLang]) return;
+    lang = newLang;
+    document.documentElement.lang = lang === "ua" ? "uk" : lang;
+    document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = tr(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) { el.placeholder = tr(el.dataset.i18nPlaceholder); });
+    renderTasks();
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
   }
 
   // ---------- tabs ----------
@@ -249,7 +305,7 @@ def get_webapp_html() -> str:
       list.appendChild(li);
     });
     const doneCount = allTasks.filter(function (t) { return t.done; }).length;
-    document.getElementById("statsLine").textContent = doneCount + " з " + allTasks.length + " виконано";
+    document.getElementById("statsLine").textContent = tr("stats", { done: doneCount, total: allTasks.length });
   }
 
   document.querySelectorAll(".filter").forEach(function (f) {
@@ -267,7 +323,7 @@ def get_webapp_html() -> str:
       allTasks = data.tasks || [];
       renderTasks();
     } catch (e) {
-      document.getElementById("empty").textContent = "Не вдалося завантажити задачі.";
+      document.getElementById("empty").textContent = tr("tasks_failed");
       document.getElementById("empty").style.display = "block";
     }
   }
@@ -307,15 +363,15 @@ def get_webapp_html() -> str:
     const city = document.getElementById("cityInput").value.trim();
     const result = document.getElementById("weatherResult");
     if (!city) return;
-    result.innerHTML = '<p class="empty">Шукаю…</p>';
+    result.innerHTML = '<p class="empty">' + tr("searching") + '</p>';
     try {
       const data = await api("/api/weather?city=" + encodeURIComponent(city));
       result.innerHTML =
-        '<div class="card"><div class="big">' + data.temp + '°C</div>' +
-        '<div class="sub">' + data.city + ' · вітер ' + data.wind + ' км/год</div>' +
-        '<div class="sub">' + data.desc + '</div></div>';
+        '<div class="card"><div class="big">' + escapeHtml(data.temp) + '°C</div>' +
+        '<div class="sub">' + escapeHtml(data.city) + ' · ' + escapeHtml(tr("wind", { wind: data.wind })) + '</div>' +
+        '<div class="sub">' + escapeHtml(data.desc) + '</div></div>';
     } catch (e) {
-      result.innerHTML = '<p class="empty">Не знайшов таке місто.</p>';
+      result.innerHTML = '<p class="empty">' + tr("city_not_found") + '</p>';
     }
   }
   document.getElementById("weatherBtn").addEventListener("click", loadWeather);
@@ -335,7 +391,7 @@ def get_webapp_html() -> str:
         '<div class="rate-row"><span>1 EUR</span><span>' + data.eur.toFixed(2) + ' ₴</span></div>';
       currencyLoaded = true;
     } catch (e) {
-      box.innerHTML = '<p class="empty">Не вдалося завантажити курси.</p>';
+      box.innerHTML = '<p class="empty">' + tr("rates_failed") + '</p>';
     }
   }
 
@@ -343,6 +399,7 @@ def get_webapp_html() -> str:
   async function checkAdmin() {
     try {
       const data = await api("/api/me");
+      if (data.lang) applyLang(data.lang);
       if (data.is_admin) document.getElementById("adminTab").style.display = "";
     } catch (e) { /* not authenticated or not admin - tab stays hidden */ }
   }

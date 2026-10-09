@@ -42,12 +42,14 @@ async def webapp_page(request: web.Request):
 
 
 async def me(request: web.Request):
-    """Tells the Mini App whether to show the Admin tab. Not itself a source
-    of admin data - every actual admin route re-checks ADMIN_ID on its own."""
+    """Tells the Mini App the user's language and whether to show the Admin tab.
+    Not itself a source of admin data - every actual admin route re-checks
+    ADMIN_ID on its own."""
     user_id = _auth(request)
     if user_id is None:
         return web.json_response({"error": "unauthorized"}, status=401)
-    return web.json_response({"is_admin": bool(ADMIN_ID) and user_id == ADMIN_ID})
+    lang = await db.get_lang(user_id)
+    return web.json_response({"is_admin": bool(ADMIN_ID) and user_id == ADMIN_ID, "lang": lang})
 
 
 async def list_tasks(request: web.Request):
